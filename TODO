@@ -1,0 +1,17 @@
+Fonctions :
+ - Affichage du plateau simple et double (array_map avec les deux tableaux)
+ - Fonctions de conversion coordonnées<=>index
+ - Fonction d'intersection
+ - Saisie des bateaux
+ - Saisie du coup
+ - Sélection aléatoire des bateaux IA
+ - Sélection aléatoire du coup IA
+ - Affichage de la progression du jeu
+ - Fin
+
+ Cas d'erreur :
+  - Superposition de bateaux
+  - Bateau en diagonale
+  - Coordonnées invalide
+  - Rejouer la même case
+  -

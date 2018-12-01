@@ -30,7 +30,7 @@ $config = [
 //      Ships : List of ships with their chosen coordinates
 //      Moves : History of moves and results
 $state = [
-    "step" => 0,
+    "step" => 1,
     "player" => [
         "ships" => [],
         "moves" => []
@@ -65,12 +65,26 @@ while(true){
     }
     else if($state['step'] === 1) {
         $ships = $config['ships'];
-        $nbShips = count($config['ships']);
-        $sideText = ["You have $nbShips ships to place on a {$config['horizontalSize']}x{$config['verticalSize']} board :"];
-        foreach($config['ships'] as $ship => $size){
-            $sideText[] = "\t- {$ship} : {$size} slots";
-        }
-        printBoard($sideText);
+        do {
+            $nbShips = count($ships);
+            $sideText = ["You have $nbShips ships to place on a {$config['horizontalSize']}x{$config['verticalSize']} board :"];
+            foreach($ships as $ship => $size){
+                $sideText[] = "\t- {$ship} : {$size} slots";
+            }
+            $nextShipName = array_keys($ships)[0];
+            $nextShipSize = array_values($ships)[0];
+            printBoard($sideText);
+            do {
+                println("Input the coordinates of the $nextShipName (e.g. A1-A$nextShipSize) :");
+                $placement = trim(fgets(STDIN));
+                list($isPlacementValid, $error) = isPlacementValid($placement, $nextShipSize);
+                if(!empty($error)){ println("Error : ".$error); }
+            } while(!$isPlacementValid);
+
+            $state['player']['ships'][] = placementToCoordinates($placement);
+            unset($ships[$nextShipName]);
+
+        } while(!empty($ships));
         break;
     }
 }

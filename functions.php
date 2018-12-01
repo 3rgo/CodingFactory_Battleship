@@ -27,12 +27,55 @@ function areCoordinatesValid($coord){
         && $y >= 0 && $y < $config['verticalSize'];
 }
 
+function isPlacementValid($placement, $shipSize){
+    global $config, $state;
+    if(!preg_match("/^[A-Z]{1}[0-9]+\-[A-Z]{1}[0-9]+$/",$placement)){
+        return [false, "Invalid placement format"];
+    }
+    list($start, $end) = explode("-", $placement);
+    list($x1, $y1) = coordinatesToIndex($start);
+    list($x2, $y2) = coordinatesToIndex($end);
+    if($x1!=$x2 && $y1!=$y2){
+        return [false, "Diagonal placement impossible"];
+    }
+    if(($givenSize = (abs($x1-$x2)+abs($y1-$y2))+1) != $shipSize){
+        return [false, "Given size ($givenSize) does not match the ship's ($shipSize)"];
+    }
+    $coordinates = placementToCoordinates($placement);
+    $ownShips = array_reduce(
+        $state['player']['ships'],
+        function($carry, $item){ return array_merge($carry, $item); },
+        []
+    );
+    echo(json_encode($ownShips). ' | ' . json_encode($coordinates));
+    $intersect = array_intersect($ownShips, $coordinates);
+    if(count($intersect) > 0){
+        $intCoord = indexToCoordinates($intersect[0]);
+        return [false, "There is already a ship in $intCoord"];
+    }
+    return [true, ""];
+}
+
+function placementToCoordinates($placement){
+    var_dump($placement);
+    list($start, $end) = explode("-", $placement);
+    list($x1, $y1) = coordinatesToIndex($start);
+    list($x2, $y2) = coordinatesToIndex($end);
+
+    if($x1 != $x2 && $y1 == $y2){
+        return array_map(function($x) use ($y1) { return indexToCoordinates($x, $y1); }, range($x1, $x2));
+    }
+    if($x1 == $x2 && $y1 != $y2){
+        return array_map(function($y) use ($x1) { return indexToCoordinates($x1, $y); }, range($y1, $y2));
+    }
+}
+
 function indexToCoordinates($x, $y){
     return chr(ord("A") + $x) . ($y + 1);
 }
 
 function coordinatesToIndex($coord){
-    list($x, $y) = explode('', strtoupper($coord));
+    list($x, $y) = str_split(strtoupper($coord));
     $x = ord($x) - ord('A');
     $y = $y - 1;
     return [$x, $y];
@@ -53,10 +96,22 @@ function printBoard($extraText = []){
     $board[0][] = "|";
     $board[1][] = "|";
 
+    $ownShips = array_reduce(
+        array_map("placementToCoordinates", $state['player']['ships']),
+        function($carry, $item){ return array_merge($carry, $item); },
+        []
+    );
+
     for($y = 0; $y < $config['verticalSize']; $y++){
         $row = [str_pad($y+1, $rowIndexSize, " ", STR_PAD_LEFT), "|"];
         for($x = 0; $x < $config['horizontalSize']; $x++){
-            $row[] = $config['cells']['empty'];
+            if(in_array([$x, $y], $ownShips)){
+                $cell = $config['cells']['ship'];
+            }
+            else {
+                $cell = $config['cells']['empty'];
+            }
+            $row[] = $cell;
         }
         $row[] = "|";
         $board[] = $row;
