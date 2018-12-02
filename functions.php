@@ -16,8 +16,8 @@ function println($str){
 
 // Board output
 function printBoards($userBoard = [], $computerBoard = [], $extraText = []){
-    $uBoard = printSingleBoard($userBoard, "PLAYER");
-    $eBoard = printSingleBoard($computerBoard, "ENEMY");
+    $uBoard = printSingleBoard($userBoard, "PLAYER", false);
+    $eBoard = printSingleBoard($computerBoard, "ENEMY", true);
 
     $output = array_map(function ($b1, $b2){
         return $b1 . "  *  " . $b2;
@@ -32,7 +32,7 @@ function printBoards($userBoard = [], $computerBoard = [], $extraText = []){
     }
 }
 
-function printSingleBoard($boardData, $title){
+function printSingleBoard($boardData, $title, $hideShips){
     $rowIndexSize = strlen(strval(VERTICAL_SIZE));
     $board = [
         [str_repeat(" ", $rowIndexSize), "|"],
@@ -45,23 +45,19 @@ function printSingleBoard($boardData, $title){
     $board[0][] = "|";
     $board[1][] = "|";
 
-    $ships = array_reduce(
-        array_map("placementToCoordinates", $boardData['ships']),
-        function($carry, $item){ return array_merge($carry, $item); },
-        []
-    );
+    $ships = getShips($boardData);
 
     foreach(range(0, VERTICAL_SIZE-1) as $y){
         $row = [str_pad($y+1, $rowIndexSize, " ", STR_PAD_LEFT), "|"];
         foreach(range(0, HORIZONTAL_SIZE-1) as $x){
             $cellCoords = indexToCoordinates($x, $y);
-            if(in_array($cellCoords, $boardData['moves']) && in_array($cellCoords, $ships)){
+            if(in_array($cellCoords, $boardData['enemyMoves']) && in_array($cellCoords, $ships)){
                 $cell = CELL_HIT;
             }
             elseif(in_array($cellCoords, $ships)){
-                $cell = CELL_SHIP;
+                $cell = $hideShips ? CELL_EMPTY : CELL_SHIP;
             }
-            elseif(in_array($cellCoords, $boardData['moves'])){
+            elseif(in_array($cellCoords, $boardData['enemyMoves'])){
                 $cell = CELL_MISS;
             }
             else {
@@ -80,6 +76,15 @@ function printSingleBoard($boardData, $title){
     $title = str_pad($title, $rowSize, " ", STR_PAD_BOTH);
     array_unshift($board, $title, str_repeat(" ", $rowSize));
     return $board;
+}
+
+// Utility function to get the list of coordinates where there is a ship
+function getShips($boardData){
+    return array_reduce(
+        array_map("placementToCoordinates", $boardData['ships']),
+        function($carry, $item){ return array_merge($carry, $item); },
+        []
+    );
 }
 
 // Utility function for coordinates and placements
@@ -114,8 +119,7 @@ function placementToCoordinates($placement){
     }
 }
 
-function isPlacementValid($placement, $shipSize){
-    global $state;
+function isPlacementValid($placement, $shipSize, $boardData){
     if(!preg_match("/^[A-Z]{1}[0-9]+\-[A-Z]{1}[0-9]+$/",$placement)){
         return [false, "Invalid placement format"];
     }
@@ -132,15 +136,48 @@ function isPlacementValid($placement, $shipSize){
         return [false, "Given size ($givenSize) does not match the ship's ($shipSize)"];
     }
     $coordinates = placementToCoordinates($placement);
-    $ownShips = array_reduce(
-        $state['player']['ships'],
-        function($carry, $item){ return array_merge($carry, $item); },
-        []
-    );
-    $intersect = array_intersect($ownShips, $coordinates);
+    $ships = getShips($boardData);
+    $intersect = array_intersect($ships, $coordinates);
     if(count($intersect) > 0){
-        $intCoord = indexToCoordinates($intersect[0]);
-        return [false, "There is already a ship in $intCoord"];
+        // $intCoord = indexToCoordinates($intersect[0]);
+        return [false, "There is already a ship in {$intersect[0]}"];
     }
     return [true, ""];
+}
+
+function isStrikeValid($coordinates, $history){
+    if(!areCoordinatesValid($coordinates)){
+        return [false, "Invalid coordinates"];
+    }
+    if(in_array($coordinates, $history)){
+        return [false, "Strike already attempted"];
+    }
+    return [true, ""];
+}
+
+
+function randomShipPlacement($shipSize, $boardData){
+    do {
+        // Generate random placement
+        $startCoord = indexToCoordinates(rand(0, HORIZONTAL_SIZE-1), rand(0, VERTICAL_SIZE-1));
+        $startIndex = coordinatesToIndex($startCoord);
+        $endIndex = $startIndex;
+        $direction = [[1, 0],[0, 1]][rand(0,1)];
+        for($i = 1; $i < $shipSize; $i++){
+            $endIndex[0] += $direction[0];
+            $endIndex[1] += $direction[1];
+        }
+        $endCoord = indexToCoordinates($endIndex[0], $endIndex[1]);
+        $placement = "$startCoord-$endCoord";
+        list($isPlacementValid, $error) = isPlacementValid($placement, $shipSize, $boardData);
+    } while(!$isPlacementValid);
+    return $placement;
+}
+
+function randomStrike($history){
+    do {
+        $coordinates = indexToCoordinates(rand(0, HORIZONTAL_SIZE-1), rand(0, VERTICAL_SIZE-1));
+        list($isStrikeValid, $error) = isStrikeValid($coordinates, $history);
+    } while (!$isStrikeValid);
+    return $coordinates;
 }

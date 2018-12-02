@@ -9,30 +9,29 @@ define('SHIPS', [
     "Battleship" => 4,
     "Cruiser" => 3,
     "Submarine" => 3,
-    "Destroyer" => 3,
+    "Destroyer" => 2,
 ]);
 define('CELL_EMPTY', ' ');
 define('CELL_MISS', 'O');
 define('CELL_SHIP', 'S');
 define('CELL_HIT', 'X');
 
-// Game state object :
-//  Steps :
-//      0 - Menu
-//      1 - Game setup
-//      2 - Game
-//  Player/Computer :
-//      Ships : List of ships with their placement (e.g. A1-A5)
-//      Moves : History of enemy moves
+// Game state object
 $state = [
     "turn" => 0,
     "player" => [
-        "ships" => [],
-        "moves" => []
+        "ships" => [
+            "A1-A5",
+            "B1-B4",
+            "C1-C3",
+            "D1-D3",
+            "E1-E2"
+        ],
+        "enemyMoves" => []
     ],
     "computer" => [
         "ships" => [],
-        "moves" => []
+        "enemyMoves" => []
     ]
 ];
 
@@ -41,8 +40,9 @@ $state = [
 while(true){
     cls();
     if($state['turn'] === 0){
-        $ships = SHIPS;
-        do {
+        // $ships = SHIPS;
+        $ships = [];
+        while(!empty($ships)) {
             $nbShips = count($ships);
             $sideText = ["You have $nbShips ships to place on a ".HORIZONTAL_SIZE."x".VERTICAL_SIZE." board :"];
             foreach($ships as $ship => $size){
@@ -54,16 +54,61 @@ while(true){
             do {
                 println("Input the coordinates of the $nextShipName (e.g. A1-A$nextShipSize) :");
                 $placement = trim(fgets(STDIN));
-                list($isPlacementValid, $error) = isPlacementValid($placement, $nextShipSize);
+                list($isPlacementValid, $error) = isPlacementValid($placement, $nextShipSize, $state['player']);
                 if(!empty($error)){ println("Error : ".$error); }
             } while(!$isPlacementValid);
 
             $state['player']['ships'][] = $placement;
             unset($ships[$nextShipName]);
-
-        } while(!empty($ships));
-        break;
+        }
+        // Setup AI ships
+        $ships = array_values(SHIPS);
+        while(!empty($ships)){
+            $shipSize = array_shift($ships);
+            $placement = randomShipPlacement($shipSize, $state['computer']);
+            $state['computer']['ships'][] = $placement;
+        }
+        // Start game
+        $state['turn'] = 1;
     } else {
+        $enemyShips = getShips($state['computer']);
+        $playerShips = getShips($state['player']);
+        do {
+            cls();
+            printBoards($state['player'], $state['computer'], ["Turn #{$state['turn']}"]);
+            do {
+                println("Input the coordinates of your next strike :");
+                $coordinates = trim(fgets(STDIN));
+                list($isStrikeValid, $error) = isStrikeValid($coordinates, $state['computer']['enemyMoves']);
+            } while(!$isStrikeValid);
+            if(in_array($coordinates, $enemyShips)){
+                println("HIT !");
+            } else {
+                println("MISS !");
+            }
+            $state['computer']['enemyMoves'][] = $coordinates;
 
+            // Check if player won
+            if(count(array_diff($enemyShips, $state['computer']['enemyMoves'])) === 0){
+                println("VICTORY !!!!");
+                break 2;
+            }
+
+            // Enemy move
+            $enemyStrike = randomStrike($state['player']['enemyMoves']);
+            println("Enemy striked at coordinates $enemyStrike : " . (in_array($enemyStrike, $playerShips) ? "HIT !" : "MISS !"));
+            $state['player']['enemyMoves'][] = $enemyStrike;
+
+            // Check if computer won
+            if(count(array_diff($playerShips, $state['player']['enemyMoves'])) === 0){
+                println("DEFEAT...");
+                break 2;
+            }
+
+            println("Press Enter to go to next turn");
+            fgets(STDIN);
+
+            $state['turn']++;
+        } while(true);
     }
 }
