@@ -20,13 +20,7 @@ define('CELL_HIT', 'X');
 $state = [
     "turn" => 0,
     "player" => [
-        "ships" => [
-            "A1-A5",
-            "B1-B4",
-            "C1-C3",
-            "D1-D3",
-            "E1-E2"
-        ],
+        "ships" => [],
         "enemyMoves" => []
     ],
     "computer" => [
@@ -40,8 +34,7 @@ $state = [
 while(true){
     cls();
     if($state['turn'] === 0){
-        // $ships = SHIPS;
-        $ships = [];
+        $ships = SHIPS;
         while(!empty($ships)) {
             $nbShips = count($ships);
             $sideText = ["You have $nbShips ships to place on a ".HORIZONTAL_SIZE."x".VERTICAL_SIZE." board :"];
