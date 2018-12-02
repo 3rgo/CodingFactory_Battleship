@@ -2,6 +2,7 @@
 
 require_once './functions.php';
 
+// Config
 define('HORIZONTAL_SIZE', 10);
 define('VERTICAL_SIZE', 10);
 define('SHIPS', [
@@ -29,12 +30,12 @@ $state = [
     ]
 ];
 
-
 // Main loop
 while(true){
     cls();
     if($state['turn'] === 0){
         $ships = SHIPS;
+        // Player's ships placement
         while(!empty($ships)) {
             $nbShips = count($ships);
             $sideText = ["You have $nbShips ships to place on a ".HORIZONTAL_SIZE."x".VERTICAL_SIZE." board :"];
@@ -67,13 +68,18 @@ while(true){
         $enemyShips = getShips($state['computer']);
         $playerShips = getShips($state['player']);
         do {
+            // Print boards
             cls();
             printBoards($state['player'], $state['computer'], ["Turn #{$state['turn']}"]);
+
+            // Ask user for move
             do {
                 println("Input the coordinates of your next strike :");
                 $coordinates = trim(fgets(STDIN));
                 list($isStrikeValid, $error) = isStrikeValid($coordinates, $state['computer']['enemyMoves']);
             } while(!$isStrikeValid);
+
+            // Display result
             if(in_array($coordinates, $enemyShips)){
                 println("HIT !");
             } else {
@@ -98,9 +104,11 @@ while(true){
                 break 2;
             }
 
+            // Require user input to prevent screen from being erased before user could read
             println("Press Enter to go to next turn");
             fgets(STDIN);
 
+            // Increment turn
             $state['turn']++;
         } while(true);
     }

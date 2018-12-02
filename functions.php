@@ -1,6 +1,9 @@
 <?php
 
-// Utility functions for output
+/**
+ * Clears screen
+ * @return void
+ */
 function cls(){
     if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
         system('cls');
@@ -9,15 +12,25 @@ function cls(){
     }
 }
 
-function println($str){
+/**
+ * Outputs string with end of line character
+ * @param $str String to output
+ * @return void
+ */
+function println(string $str){
     echo $str . PHP_EOL;
 }
 
-
-// Board output
-function printBoards($userBoard = [], $computerBoard = [], $extraText = []){
-    $uBoard = printSingleBoard($userBoard, "PLAYER", false);
-    $eBoard = printSingleBoard($computerBoard, "ENEMY", true);
+/**
+ * Displays the two board side by side, with optional text
+ * @param $playerBoard User board data (ship placement and enemy moves)
+ * @param $computerBoard Enemy board data (ship placement and player moves)
+ * @param $extraText Extra text to display below the boards
+ * @return void
+ */
+function printBoards(array $playerBoard = [], array $computerBoard = [], array $extraText = []){
+    $uBoard = computeBoardOutput($playerBoard, "PLAYER", false);
+    $eBoard = computeBoardOutput($computerBoard, "ENEMY", true);
 
     $output = array_map(function ($b1, $b2){
         return $b1 . "  *  " . $b2;
@@ -32,7 +45,14 @@ function printBoards($userBoard = [], $computerBoard = [], $extraText = []){
     }
 }
 
-function printSingleBoard($boardData, $title, $hideShips){
+/**
+ * Computes the output for a single board
+ * @param $boardData Board data (ship placement and enemy moves)
+ * @param $title Board title (displayed above)
+ * @param $hideShips Whether to show or hide ships
+ * @return array Board display output
+ */
+function computeBoardOutput(array $boardData, string $title, bool $hideShips){
     $rowIndexSize = strlen(strval(VERTICAL_SIZE));
     $board = [
         [str_repeat(" ", $rowIndexSize), "|"],
@@ -78,8 +98,12 @@ function printSingleBoard($boardData, $title, $hideShips){
     return $board;
 }
 
-// Utility function to get the list of coordinates where there is a ship
-function getShips($boardData){
+/**
+ * Return the lists of coordinates where there is a ship
+ * @param $boardData Board data (ship placement and enemy moves)
+ * @return array Array of individual coordinate where a ship is present
+ */
+function getShips(array $boardData){
     return array_reduce(
         array_map("placementToCoordinates", $boardData['ships']),
         function($carry, $item){ return array_merge($carry, $item); },
@@ -87,14 +111,23 @@ function getShips($boardData){
     );
 }
 
-// Utility function for coordinates and placements
-function areCoordinatesValid($coord){
+/**
+ * Checks whether a coordinate string is valid
+ * @param $coord Coordinate
+ * @return boolean Boolean indicating validity
+ */
+function areCoordinatesValid(string $coord){
     list($x, $y) = coordinatesToIndex($coord);
     return $x >= 0 && $x < HORIZONTAL_SIZE
         && $y >= 0 && $y < VERTICAL_SIZE;
 }
 
-function coordinatesToIndex($coord){
+/**
+ * Converts a coordinate to X/Y indexes
+ * @param $coord Coordinate
+ * @return array Array of X/Y indexes
+ */
+function coordinatesToIndex(string $coord){
     preg_match("/^([A-Z]+)([0-9]+)$/",strtoupper($coord), $matches);
     list(, $x, $y) = $matches;
     $x = ord($x) - ord('A');
@@ -102,11 +135,22 @@ function coordinatesToIndex($coord){
     return [$x, $y];
 }
 
-function indexToCoordinates($x, $y){
+/**
+ * Converts X/Y indexes to coordinates
+ * @param $x Horizontal index
+ * @param $y Vertical index
+ * @return string Coordinate
+ */
+function indexToCoordinates(int $x, int $y){
     return chr(ord("A") + $x) . ($y + 1);
 }
 
-function placementToCoordinates($placement){
+/**
+ * Converts a placement string to an array of coordinates
+ * @param $placement Placement string
+ * @return array Array of coordinates
+ */
+function placementToCoordinates(string $placement){
     list($start, $end) = explode("-", $placement);
     list($x1, $y1) = coordinatesToIndex($start);
     list($x2, $y2) = coordinatesToIndex($end);
@@ -119,7 +163,14 @@ function placementToCoordinates($placement){
     }
 }
 
-function isPlacementValid($placement, $shipSize, $boardData){
+/**
+ * Checks whether a placement string is valid based on ship size and board data
+ * @param $placement Placement string (e.g. A1-A5)
+ * @param $shipSize Ship size
+ * @param $boardData Board data (ship placement and enemy moves)
+ * @return array Array containing a status boolean and an error message
+ */
+function isPlacementValid(string $placement, int $shipSize, array $boardData){
     if(!preg_match("/^[A-Z]{1}[0-9]+\-[A-Z]{1}[0-9]+$/",$placement)){
         return [false, "Invalid placement format"];
     }
@@ -145,7 +196,13 @@ function isPlacementValid($placement, $shipSize, $boardData){
     return [true, ""];
 }
 
-function isStrikeValid($coordinates, $history){
+/**
+ * Checks whether strike coordinates are valid based on history
+ * @param $coordinates Coordinates from user input
+ * @param $history Strike history
+ * @return array Array containing a status boolean and an error message
+ */
+function isStrikeValid(string $coordinates, array $history){
     if(!areCoordinatesValid($coordinates)){
         return [false, "Invalid coordinates"];
     }
@@ -155,7 +212,12 @@ function isStrikeValid($coordinates, $history){
     return [true, ""];
 }
 
-
+/**
+ * Generates a random ship placement based on size and board data
+ * @param $shipSize Ship size
+ * @param $boardData Board data (ship placement and enemy moves)
+ * @return string Placement string
+ */
 function randomShipPlacement($shipSize, $boardData){
     do {
         // Generate random placement
@@ -174,7 +236,12 @@ function randomShipPlacement($shipSize, $boardData){
     return $placement;
 }
 
-function randomStrike($history){
+/**
+ * Generates a random coordinates for AI strike, based on strike history (to prevent duplicates)
+ * @param $history History of AI strikes
+ * @return string Strike coordinates
+ */
+function randomStrike(array $history){
     do {
         $coordinates = indexToCoordinates(rand(0, HORIZONTAL_SIZE-1), rand(0, VERTICAL_SIZE-1));
         list($isStrikeValid, $error) = isStrikeValid($coordinates, $history);
