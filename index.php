@@ -44,6 +44,7 @@ while(true){
             }
             $nextShipName = array_keys($ships)[0];
             $nextShipSize = array_values($ships)[0];
+            cls();
             printBoards($state['player'], $state['computer'], $sideText);
             do {
                 println("Input the coordinates of the $nextShipName (e.g. A1-A$nextShipSize) :");
